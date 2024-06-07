@@ -1,0 +1,55 @@
+$schema: https://azuremlschemas.azureedge.net/latest/commandJob.schema.json
+
+# This runs a couple of tests on a gpu node.
+# It helps diagnosis of health of perf issues.
+
+type: command
+
+code: src
+command: /bin/bash ./gpu_perf.sh
+
+# to iterate quickly on your environment design, use inline
+environment: azureml:nccltests_azureml:openmpi4.1.0-cuda11.1-cudnn8-ubuntu18.04
+
+
+# to reuse with different parameters, use registered environment 
+# environment: azureml:nccltests_azureml:openmpi4.1.0-cuda11.1-cudnn8-ubuntu18.04
+# environment: azureml:nccltests_nvidia_pytorch:22.02-py3
+
+# NOTE: set env var if needed by your configuration
+environment_variables:
+  HYDRA_FULL_ERROR: '1'
+  UCX_IB_PCI_RELAXED_ORDERING: 'auto'
+  NCCL_IB_PCI_RELAXED_ORDERING: '1'
+  NCCL_IB_TIMEOUT: '22'
+  NCCL_DEBUG: INFO
+  AZUREML_CR_BOOTSTRAPPER_CONFIG_OVERRIDE: '{ "capabilities_registry": { "registry": { "url": "commonruntimedev.azurecr.io" }, "repo_prefix": "user/makuchma/ncai-build", "regional_tag_prefix": false } }'
+  #AZUREML_CR_BOOTSTRAPPER_CONFIG_OVERRIDE: '{"capabilities_registry": {"registry": {"url": "commonruntimedev.azurecr.io"}, "repo_prefix": "enhanced_checks_with_dcgmi", "regional_tag_prefix": false}}'
+  AZUREML_CR_ENHANCED_HEALTH_CHECKS_RECOVER: "false"
+  AZUREML_CR_ENHANCED_DCGMI_CHECK_LEVEL: "3"
+  #NCCL_IB_PCI_RELAXED_ORDERING: "1" # Relaxed Ordering can greatly help the performance of Infiniband networks in virtualized environments.
+  # NCCL_IB_DISABLE: "1" # force disable infiniband (if set to "1")
+  # NCCL_NET_PLUGIN: "none" # to force NET/Plugin off (no rdma/sharp plugin at all)
+  # NCCL_NET: "Socket" # to force node-to-node comm to use Socket
+  # NCCL_SOCKET_IFNAME: "eth0" # to force Socket comm to use eth0 (use NCCL_NET=Socket)
+  # NCCL_TOPO_FILE: "/opt/microsoft/ndv4-topo.xml" # Use special topology file
+
+  # UCX_IB_PCI_RELAXED_ORDERING: "on"
+  # UCX_TLS: "tcp"
+  # UCX_NET_DEVICES: "eth0" # if you have Error: Failed to resolve UCX endpoint...
+
+  # CUDA_DEVICE_ORDER: "PCI_BUS_ID" # ordering of gpus
+
+
+compute: azureml:NCAI-A100-LLMv9
+
+distribution:
+  type: mpi
+  process_count_per_instance: 8 # NOTE: set equal to number of gpus on the node
+
+resources:
+  instance_count: 130  # NOTE: to use multiple nodes
+
+experiment_name: nccl-test
+display_name: nccl-test
+description: Runs NCCL-tests on gpu nodes.
